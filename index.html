@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>EclipseOS Terminal</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1e1e2e;
+      color: #cdd6f4;
+      font-family: "Fira Code", monospace;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #terminal {
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+    #input-line {
+      display: flex;
+    }
+    #command-input {
+      background: none;
+      border: none;
+      color: inherit;
+      font: inherit;
+      width: 100%;
+      outline: none;
+    }
+    .green { color: #a6e3a1; }
+    .blue { color: #89b4fa; }
+    .yellow { color: #f9e2af; }
+    .magenta { color: #f5c2e7; }
+    .cyan { color: #94e2d5; }
+    .red { color: #f38ba8; }
+    .orange { color: #fab387; }
+    .purple { color: #cba6f7; }
+    .prompt-symbol { color: #f38ba8; }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+    <div>Booting into EclipseOS Terminal...</div>
+  </div>
+  <div id="input-line">
+    <span id="prompt">
+      <span class="green">user@eclipse</span>:<span class="blue">~</span><span class="prompt-symbol"> ❯ </span>
+    </span>
+    <input type="text" id="command-input" autofocus />
+  </div>
+  <script>
+    const terminal = document.getElementById("terminal");
+    const input = document.getElementById("command-input");
+    const promptEl = document.getElementById("prompt");
+
+    let inPython = false;
+    let installedPkgs = [];
+
+    const logoLines = [
+      "          _____          ",
+      "         /\\    \\         ",
+      "        /::\\    \\        ",
+      "       /::::\\    \\       ",
+      "      /::::::\\    \\      ",
+      "     /:::/\\:::\\    \\     ",
+      "    /:::/__\\:::\\    \\    ",
+      "   /::::\\   \\\:::\\    \\   ",
+      "  /::::::\\   \\\:::\\    \\  ",
+      " /:::/\\:::\\   \\\:::\\    \\ ",
+      "/:::/__\\:::\\   \\\:::\\____\\",
+      "\\:::\\   \\\:::\\   \\\::/    /",
+      " \\\:::\\   \\\:::\\   \\/____/ ",
+      "  \\\:::\\   \\\:::\\    \\     ",
+      "   \\\:::\\   \\\:::\\____\\    ",
+      "    \\\:::\\   \\\::/    /    ",
+      "     \\\:::\\   \\/____/     ",
+      "      \\\:::\\    \\         ",
+      "       \\\:::\\____\\        ",
+      "        \\\::/    /        ",
+      "         \\/____/         "
+    ];
+
+    const specs = [
+      `OS: EclipseOS Web v3`,
+      `Host: SimBrowser 3000`,
+      `Kernel: JS‑Kernel 1.3`,
+      `Packages: 2`,
+      `Python: simulated 3.11`,
+      `Git: v2.42 simulated`,
+      `Lyrics: live`,
+      `Shell: eShell v3`,
+      `Terminal: eclipse‑terminal 2.0`
+    ];
+
+    const colors = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple'];
+
+    function colorize(line, i) {
+      return `<span class="${colors[i % colors.length]}">${line}</span>`;
+    }
+
+    function getNeofetch() {
+      let lines = [];
+      for (let i = 0; i < logoLines.length; i++) {
+        const left = colorize(logoLines[i], i);
+        const right = specs[i] ? `   ${specs[i]}` : "";
+        lines.push(`${left}${right}`);
+      }
+      return lines.join("\n");
+    }
+
+    const commands = {
+      help: () => "Commands: help, clear, neofetch, echo, about, python, pip install <pkg>, pip list, git init, git clone <repo>, lyrics <artist> <title>, exit",
+      clear: () => { terminal.innerHTML = ""; return ""; },
+      neofetch: () => getNeofetch(),
+      echo: args => args.join(" "),
+      about: () => "🌑 EclipseOS Web Terminal v3 — now with live lyrics!",
+      python: () => { inPython = true; promptEl.innerHTML = `<span class=\"magenta\">python</span><span class=\"prompt-symbol\"> >>> </span>`; return "Simulated Python 3.11\nType exit() to quit."; },
+      pip: args => {
+        if (args[0] === "install" && args[1]) {
+          if (!installedPkgs.includes(args[1])) {
+            installedPkgs.push(args[1]);
+            return `Installed ${args[1]}`;
+          }
+          return `${args[1]} already installed.`;
+        } else if (args[0] === "list") {
+          return installedPkgs.length ? installedPkgs.join("\n") : "No packages installed.";
+        } else {
+          return "Usage: pip install <pkg> | pip list";
+        }
+      },
+      git: args => {
+        if (args[0] === "init") return "Initialized empty Git repository.";
+        if (args[0] === "clone" && args[1]) return `Cloned ${args[1].split("/").pop()}`;
+        return "git: init, clone <repo>";
+      },
+      lyrics: async args => {
+        if (args.length < 2) return "Usage: lyrics <artist> <title>";
+        const artist = encodeURIComponent(args[0]);
+        const title = encodeURIComponent(args.slice(1).join(" "));
+        const url = `https://api.lyrics.ovh/v1/${artist}/${title}`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return `Error fetching lyrics: ${res.status}`;
+          const data = await res.json();
+          return data.lyrics || "Lyrics not found.";
+        } catch (e) {
+          return `Fetch error: ${e.message}`;
+        }
+      }
+    };
+
+    function runPython(cmd) {
+      if (cmd === "exit()") {
+        inPython = false;
+        promptEl.innerHTML = `<span class=\"green\">user@eclipse</span>:<span class=\"blue\">~</span><span class=\"prompt-symbol\"> ❯ </span>`;
+        return "Exited Python shell.";
+      }
+      try {
+        return eval(cmd);
+      } catch (e) {
+        return `Error: ${e.message}`;
+      }
+    }
+
+    function printOutput(output) {
+      if (!output) return;
+      output.split("\n").forEach(line => {
+        const div = document.createElement("div");
+        div.innerHTML = line;
+        terminal.appendChild(div);
+      });
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function printCommand(cmd) {
+      const div = document.createElement("div");
+      div.innerHTML = inPython ?
+        `<span class=\"magenta\">python</span><span class=\"prompt-symbol\"> >>> </span> ${cmd}` :
+        `<span class=\"green\">user@eclipse</span>:<span class=\"blue\">~</span><span class=\"prompt-symbol\"> ❯ </span> ${cmd}`;
+      terminal.appendChild(div);
+    }
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        const text = input.value.trim();
+        printCommand(text);
+        (async () => {
+          let result = "";
+          if (inPython) {
+            result = runPython(text);
+          } else {
+            const [cmd, ...args] = text.split(" ");
+            const action = commands[cmd];
+            result = action ? await action(args) : `${cmd}: command not found`;
+          }
+          printOutput(result);
+          input.value = "";
+        })();
+      }
+    });
+  </script>
+</body>
+</html>
