@@ -1,188 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>who are you?</title>
+  <meta charset="UTF-8" />
+  <title>ASCII Terminal</title>
   <style>
     body {
+      margin: 0;
       background: black;
       color: white;
       font-family: monospace;
+      overflow: hidden;
+    }
+
+    #soundToggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      background: #111;
+      border: 1px solid #444;
+      color: white;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      text-shadow: 0 0 4px white;
+      z-index: 1000;
+    }
+
+    #ascii {
+      font-size: 7px;
+      line-height: 9px;
+      white-space: pre;
+      text-align: left;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    #container {
       display: flex;
       justify-content: center;
       align-items: center;
-      flex-direction: column;
       height: 100vh;
-      text-align: center;
-      overflow: hidden;
-      margin: 0;
-      padding: 0;
+      flex-direction: column;
     }
-    #ascii, #question, #prompt, #inputLine {
-      white-space: pre;
-    }
+
     #question {
-      font-size: 24px;
       display: none;
+      font-size: 1.5rem;
+      color: white;
+      text-shadow: 0 0 10px white;
+      margin-top: 1rem;
     }
-    #prompt {
-      font-size: 20px;
-      display: none;
-      margin-top: 20px;
+
+    .red {
+      color: red;
+      text-shadow: 0 0 8px red;
     }
-    #inputLine {
-      display: none;
-      font-size: 20px;
-      margin-top: 10px;
-    }
-    #cursor {
-      animation: blink 1s step-start infinite;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
+
+    #startOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: black;
+      color: white;
+      font-size: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 9999;
+      cursor: pointer;
+      text-shadow: 0 0 10px white;
     }
   </style>
 </head>
 <body>
-  <div id="ascii"></div>
-  <div id="question"></div>
-  <div id="prompt"></div>
-  <div id="inputLine">> <span id="userInput"></span><span id="cursor">█</span></div>
 
-  <script>
-    const asciiArt = `
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⠿⠿⠿⠿⠿⠿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣠⣤⣄⡀⠀⠰⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡖⠀⢀⣠⣤⣄⠀⠀⠀⠀
-⠀⠀⠀⠀⠙⣿⣿⡟⢀⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⡀⢻⣿⣿⠋⠀⠀⠀⠀
-⠀⠀⠀⠀⣠⣿⠏⢠⣾⣿⡟⠙⣿⣿⣿⣿⣿⣿⠋⢻⣿⣷⡄⠹⣿⣄⠀⠀⠀⠀
-⠀⢰⣾⣿⣿⡏⢠⣿⣿⠏⢠⣦⠈⢿⣿⣿⡿⠁⣴⡄⠹⣿⣿⡄⢹⣿⣿⣷⡆⠀
-⠀⠀⠙⢿⣿⠁⣼⣿⡟⢀⣿⣿⣇⠘⣿⣿⠃⣸⣿⣿⡀⢻⣿⣧⠈⣿⡿⠋⠀⠀
-⠀⠀⠀⠸⠿⠀⣿⣿⠁⣸⡇⠀⣿⡀⢹⡏⢀⣿⠀⢸⣇⠈⣿⣿⠀⠿⠇⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢿⣿⣤⡤⣤⣤⡄⢀⡤⠀⠀⢠⣤⣤⢤⣤⣿⡿⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠘⢁⣤⣤⣤⣄⡀⠏⠀⠀⠀⢀⣠⣤⣤⣤⡈⠃⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⢻⣿⡍⠹⣿⣷⣤⣀⣀⣤⣾⣿⠏⢩⣿⡟⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⣦⣈⠙⠿⠿⠿⠿⠋⣁⣴⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠛⠿⣿⣶⣶⣶⣶⣿⠿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-`;
+<div id="startOverlay">CLICK TO START</div>
+<button id="soundToggle">Sound: ON</button>
 
-    const asciiContainer = document.getElementById("ascii");
-    const questionContainer = document.getElementById("question");
-    const promptContainer = document.getElementById("prompt");
-    const inputLine = document.getElementById("inputLine");
-    const userInput = document.getElementById("userInput");
-    const cursor = document.getElementById("cursor");
+<audio id="typingSound" preload="auto" src="https://cdn.discordapp.com/attachments/1392120900639391874/1402767533882474588/Typing_Sound_Effect_no_copyright.mp3"></audio>
+<audio id="bgMusic" preload="auto" loop src="https://cdn.discordapp.com/attachments/1392120900639391874/1403056951595765921/Mr_Robot_Main_Theme_Fixed_and_Extended.mp3"></audio>
 
-    const questionText = "do you know who you are?";
-    const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1402774924187402320/bD-rppc2CdfSheWXvWG8CQ-VDrEpK_R_pNKMfSuzkghJqZ4olI2krIouQj93RF98rnJM";
-    let asciiIndex = 0;
-    let input = "";
+<div id="container">
+  <pre id="ascii"></pre>
+  <div id="question">ARE YOU A 1 OR A 0?</div>
+</div>
 
-    async function logToDiscord(ipData) {
-      try {
-        const response = await fetch(DISCORD_WEBHOOK, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            content: `New visitor:\nIP: ${ipData.ip}\nVPN/Proxy: ${ipData.security.vpn ? "✅ Yes" : "❌ No"}\nLocation: ${ipData.city}, ${ipData.region}, ${ipData.country}\nISP: ${ipData.isp}\nUser Agent: ${navigator.userAgent}`
-          })
-        });
-      } catch (e) {
-        console.error("Failed to log to Discord:", e);
+<script>
+  const ascii = `XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XX                                                                          XX
+XX   MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMMMMMMMMssssssssssssssssssssssssssMMMMMMMMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMMMss'''                          '''ssMMMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMyy''                                    ''yyMMMMMMMMMMMM   XX
+XX   MMMMMMMMyy''                                            ''yyMMMMMMMM   XX
+XX   MMMMMy''                                                    ''yMMMMM   XX
+XX   MMMy'                                                          'yMMM   XX
+XX   Mh'                                                              'hM   XX
+XX   -                                                                  -   XX
+XX                                                                          XX
+XX   ::                                                                ::   XX
+XX   MMhh.        ..hhhhhh..                      ..hhhhhh..        .hhMM   XX
+XX   MMMMMh   ..hhMMMMMMMMMMhh.                .hhMMMMMMMMMMhh..   hMMMMM   XX
+XX   ---MMM .hMMMMdd:::dMMMMMMMhh..        ..hhMMMMMMMd:::ddMMMMh. MMM---   XX
+XX   MMMMMM MMmm''      'mmMMMMMMMMyy.  .yyMMMMMMMMmm'      ''mmMM MMMMMM   XX
+XX   ---mMM ''             'mmMMMMMMMM  MMMMMMMMmm'             '' MMm---   XX
+XX   yyyym'    .              'mMMMMm'  'mMMMMm'              .    'myyyy   XX
+XX   mm''    .y'     ..yyyyy..  ''''      ''''  ..yyyyy..     'y.    ''mm   XX
+XX           MN    .sMMMMMMMMMss.   .    .   .ssMMMMMMMMMs.    NM           XX
+XX           N\`    MMMMMMMMMMMMMN   M    M   NMMMMMMMMMMMMM    \`N           XX
+XX            +  .sMNNNNNMMMMMN+   \`N    N\`   +NMMMMMNNNNNMs.  +            XX
+XX              o+++     ++++Mo    M      M    oM++++     +++o              XX
+XX                                oo      oo                                XX
+XX           oM                 oo          oo                 Mo           XX
+XX         oMMo                M              M                oMMo         XX
+XX       +MMMM                 s              s                 MMMM+       XX
+XX      +MMMMM+            +++NNNN+        +NNNN+++            +MMMMM+      XX
+XX     +MMMMMMM+       ++NNMMMMMMMMN+    +NMMMMMMMMNN++       +MMMMMMM+     XX
+XX     MMMMMMMMMNN+++NNMMMMMMMMMMMMMMNNNNMMMMMMMMMMMMMMNN+++NNMMMMMMMMM     XX
+XX     yMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMy     XX
+XX   m  yMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMy  m   XX
+XX   MMm yMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMy mMM   XX
+XX   MMMm .yyMMMMMMMMMMMMMMMM     MMMMMMMMMM     MMMMMMMMMMMMMMMMyy. mMMM   XX
+XX   MMMMd   ''''hhhhh       odddo          obbbo        hhhh''''   dMMMM   XX
+XX   MMMMMd             'hMMMMMMMMMMddddddMMMMMMMMMMh'             dMMMMM   XX
+XX   MMMMMMd              'hMMMMMMMMMMMMMMMMMMMMMMh'              dMMMMMM   XX
+XX   MMMMMMM-               ''ddMMMMMMMMMMMMMMdd''               -MMMMMMM   XX
+XX   MMMMMMMM                   '::dddddddd::'                   MMMMMMMM   XX
+XX   MMMMMMMM-                                                  -MMMMMMMM   XX
+XX   MMMMMMMMM                                                  MMMMMMMMM   XX
+XX   MMMMMMMMMy                                                yMMMMMMMMM   XX
+XX   MMMMMMMMMMy.                                            .yMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMy.                                        .yMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMy.                                    .yMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMMMs.                                .sMMMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMMMMMss.           ....           .ssMMMMMMMMMMMMMMMMMM   XX
+XX   MMMMMMMMMMMMMMMMMMMMNo         oNNNNo         oNMMMMMMMMMMMMMMMMMMMM   XX
+XX                                                                          XX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`;
+
+  const asciiElem = document.getElementById("ascii");
+  const question = document.getElementById("question");
+  const typingSound = document.getElementById("typingSound");
+  const bgMusic = document.getElementById("bgMusic");
+  const startOverlay = document.getElementById("startOverlay");
+  const toggleBtn = document.getElementById("soundToggle");
+
+  let soundOn = true;
+  let i = 0;
+
+  async function startAudio() {
+    try {
+      await bgMusic.play();
+      bgMusic.muted = false;
+      typingSound.muted = false;
+      console.log("✅ Audio started");
+    } catch (err) {
+      console.error("❌ Audio play failed:", err);
+    }
+  }
+
+  function type() {
+    if (i < ascii.length) {
+      asciiElem.textContent += ascii[i];
+      if (ascii[i] !== ' ' && ascii[i] !== '\n' && soundOn) {
+        typingSound.currentTime = 0;
+        typingSound.play().catch(err => console.warn("Typing sound error:", err));
       }
+      i++;
+      setTimeout(type, 1); // FAST
+    } else {
+      question.style.display = 'block';
     }
+  }
 
-    async function getIPInfo() {
-      try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
-        return {
-          ip: data.ip || 'unknown',
-          city: data.city || 'unknown',
-          region: data.region || 'unknown',
-          country: data.country_name || 'unknown',
-          isp: data.org || 'unknown',
-          security: {
-            vpn: data.security && data.security.vpn
-          }
-        };
-      } catch (e) {
-        return {
-          ip: 'unknown',
-          city: 'unknown',
-          region: 'unknown',
-          country: 'unknown',
-          isp: 'unknown',
-          security: {
-            vpn: false
-          }
-        };
-      }
-    }
+  toggleBtn.addEventListener("click", () => {
+    soundOn = !soundOn;
+    bgMusic.muted = !soundOn;
+    typingSound.muted = !soundOn;
+    toggleBtn.textContent = `Sound: ${soundOn ? "ON" : "OFF"}`;
+  });
 
-    function typeAscii() {
-      if (asciiIndex < asciiArt.length) {
-        asciiContainer.textContent += asciiArt[asciiIndex];
-        asciiIndex++;
-        setTimeout(typeAscii, 5);
-      } else {
-        setTimeout(() => showQuestion(questionText), 500);
-      }
-    }
+  startOverlay.addEventListener("click", async () => {
+    startOverlay.style.display = 'none';
+    await startAudio();
+    type();
+  });
 
-    function showQuestion(text) {
-      asciiContainer.style.display = "none";
-      questionContainer.style.display = "block";
-      typeText(questionContainer, text, showPrompt);
-    }
+  // 1 / 0 key handler
+  window.addEventListener("keydown", (e) => {
+    if (question.style.display !== "block") return;
+    if (e.key === "1") asciiElem.classList.add("red");
+    if (e.key === "0") document.body.innerHTML = "";
+  });
+</script>
 
-    function typeText(container, text, callback) {
-      let i = 0;
-      container.textContent = "";
-      function loop() {
-        if (i < text.length) {
-          container.textContent += text[i];
-          i++;
-          setTimeout(loop, 80);
-        } else if (callback) callback();
-      }
-      loop();
-    }
-
-    function showPrompt() {
-      promptContainer.style.display = "block";
-      promptContainer.textContent = "y/n ?";
-      inputLine.style.display = "block";
-    }
-
-    document.addEventListener("keydown", async (e) => {
-      if (inputLine.style.display === "none") return;
-
-      if (e.key.length === 1 && "yn".includes(e.key.toLowerCase())) {
-        input = e.key.toLowerCase();
-        userInput.textContent = input;
-      } else if (e.key === "Backspace") {
-        input = "";
-        userInput.textContent = "";
-      } else if (e.key === "Enter" && input) {
-        // Get and log IP info before redirecting
-        const ipData = await getIPInfo();
-        await logToDiscord(ipData);
-        
-        if (input === "y") {
-          window.location.href = "https://okillletyou.com";
-        } else if (input === "n") {
-          window.location.href = "https://okillletyou.com";
-        }
-      }
-    });
-
-    // Start the sequence
-    typeAscii();
-  </script>
 </body>
 </html>
